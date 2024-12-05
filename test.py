@@ -26,7 +26,9 @@ nx = 100  # Số điểm không gian
 dx = 0.1  # Khoảng cách giữa các điểm
 dt = 0.001  # Bước thời gian
 nt = 500  # Số bước thời gian
-D = 0.1  # Hệ số khuếch tán
+D = 0.1  # Hệ số khuếch tán 
+
+#hle
 
 # Điều kiện ban đầu: Gauss hoặc Dirac delta
 x = jnp.linspace(0, nx*dx, nx)
