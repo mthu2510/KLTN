@@ -3,34 +3,33 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from math import*
 #mpl.rc("text",usetex=True)
-fs=22
+fs = 22
 
 #Định nghĩa hàm Q(Q0,E) và D(E)
 def func_Q(Q0, E):
-
     Q = Q0*(E/1.0e9)**-2.4
     return Q
 
-def func_D(E):                          #Diffusion coefficient
-
+#Diffusion coefficient
+def func_D(E):                          
     D = 1.0e28*(E/1.0e9)**0.333
     return D 
 
 
 #Đồ thị từ data:
-filename='plot_data_flux_p_AMS.dat'
-Ea, jE_AMS, err_Ea, err_jE_AMS=np.loadtxt(filename,unpack=True,usecols=[0,1,2,3])
+filename = 'plot_data_flux_p_AMS.dat'
+Ea, jE_AMS, err_Ea, err_jE_AMS = np.loadtxt(filename, unpack=True, usecols=[0,1,2,3])
 
-fig=plt.figure(figsize=(10, 8))
-ax=plt.subplot(111)
+fig = plt.figure(figsize = (10, 8))
+ax = plt.subplot(111)
 
-n=2.7
-ax.errorbar(Ea,Ea**n*jE_AMS,Ea**n*err_jE_AMS,err_Ea,'g^',markersize=5.0,elinewidth=2.5)     #Vẽ đồ thị từ data
+n = 2.7
+ax.errorbar(Ea, Ea**n*jE_AMS, Ea**n*err_jE_AMS, err_Ea, 'g^', markersize=5.0, elinewidth = 2.5)     #Vẽ đồ thị từ data
 
 #_________________________________________________________________________________________________________________________
 
 #Thông số:
-E=np.logspace(9.0,11.0,100)
+E = np.logspace(9.0,11.0,100)
 mp = 938.272e6 #eV                                  #khối lượng proton
 Vp = np.sqrt((E + mp)**2-mp**2)*3.0e10/(E + mp)     #vận tốc tương đối tính
 
@@ -42,8 +41,8 @@ Q0 = 1.0e-33
 #_________________________________________________________________________________________________________________________
 
 #Định nghĩa hàm mật độ dòng:
-j1 = (Vp/(np.pi*4.0))*(h/u0)*func_Q(Q0, E)*(1.0 - np.exp((-u0*H)/func_D(E)))    #With Galatic wind 
-j2 = (Vp/(np.pi*4.0))*H*h*func_Q(Q0,E)/func_D(E)                                #Without Galatic wind
+j1 = (Vp / (np.pi*4.0)) * (h/u0) * func_Q(Q0, E) * (1.0 - np.exp((-u0*H) / func_D(E)))    #With Galatic wind 
+j2 = (Vp / (np.pi*4.0)) * H * h * func_Q(Q0,E) / func_D(E)                                #Without Galatic wind
 
 #Vẽ đồ thị
 ax.plot(E,E**n*j1,'r--')   #màu đỏ              With Galatic wind 
