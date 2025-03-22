@@ -32,7 +32,7 @@ gr_test = np.sum(j0_n * coeff_gSNR[:,np.newaxis], axis=0)
 print(gr_test[0:10])"""
 
 def Q_E_func(E):
-    return (E / 1.0) ** -2.2
+    return (E / 1.0) ** -2.4
 
 Q_E = Q_E_func(E_vals)
 
@@ -41,7 +41,7 @@ def compute_j_E(E_vals, num_zeros):
     D_E = D0 * (E_vals / 1.0) ** (1/3)  # D(E) according to the problem
     j_E = np.zeros_like(E_vals)
 
-    g_SNR_coeff = coeff_gSNR
+    g_SNR = gr_test
 
     for i, E in enumerate(E_vals):
         f_z = 0
@@ -52,11 +52,9 @@ def compute_j_E(E_vals, num_zeros):
             coth_SnH = 1 / np.tanh(S_n * H / 2)
 
             J0_rval = sp.special.j0(zeta_n * r_val / R)  # Compute J0 at r_val
-            g_SNR_n = g_SNR_coeff[n]  # Get coefficient for mode n
-
-            A_n = - (Q_E[i] * g_SNR_n) / (2 * np.exp(S_n * H / 2) * np.sinh(S_n * H / 2) * (u0 + D_E[i] * S_n * coth_SnH))
+            g_SNR_n = g_SNR[n]  # Get coefficient for mode n
             
-            f_z += A_n * J0_rval * np.exp(u0 * z / (2 * D_E[i]) + S_n * H / 2) * np.sinh(S_n * (H - z) / 2) / np.sinh(S_n * H / 2)
+            f_z += (Q_E[i] * g_SNR_n * J0_rval * np.exp(u0 * z / (2 * D_E[i])) * np.sinh(S_n * (H - z) / 2)) / (np.sinh(S_n * H / 2) * (u0 + D_E[i]*S_n*coth_SnH))
 
         v = np.sqrt(2 * E * 1.6e-6 / 9.11e-28)  # Compute particle velocity (cm/s) from energy (1 GeV = 1.6e-6 erg)
         j_E[i] = v * f_z / (4 * np.pi)
@@ -68,7 +66,7 @@ j_E_vals = compute_j_E(E_vals, num_zeros)
 
 # Plot the graph
 plt.figure(figsize=(8, 6))
-plt.loglog(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
+plt.plot(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
 plt.xlabel('E (GeV)')
 plt.ylabel('j(E)')
 plt.title('Particle Spectrum j(E)')
