@@ -66,7 +66,9 @@ j_E_vals = compute_j_E(E_vals, num_zeros)
 
 # Plot the graph
 plt.figure(figsize=(8, 6))
-plt.plot(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
+#plt.plot(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
+plt.loglog(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
+
 plt.xlabel('E (GeV)')
 plt.ylabel('j(E)')
 plt.title('Particle Spectrum j(E)')
