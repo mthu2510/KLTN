@@ -9,7 +9,7 @@ u0 = 7 * 1e5  # km/s to cm/s (1 km = 1e5 cm)
 D0 = 1e28  # cm^2/s
 r_val = 8  # kpc
 z = 0  # Define z variable instead of substituting directly
-E_vals = np.logspace(-1, 2, 100)  # Energy values from 0.1 GeV to 100 GeV
+E_vals = np.logspace(9.0, 11.0, 100)
 num_zeros = 1000  # Number of first zeros of J0 to use
 
 # Find the first zeros of J0(x)
@@ -67,12 +67,12 @@ def compute_j_E(E_vals, num_zeros):
     g_SNR = func_coeff_gSNR()
 
     S_n = np.sqrt(u0**2 / (D_E[:,np.newaxis]**2) + 4 * zeros_j0[np.newaxis,:]**2 / R**2)
-    coth_SnH = 1 / np.tanh(S_n * H / 2)
+    coth_SnH = 1.0 / np.tanh(S_n * H / 2.0)
 
     J0_rval = sp.special.j0(zeros_j0 * r_val / R)  # Compute J0 at r_val
     
-    f_z = np.sum((g_SNR[np.newaxis,:] * J0_rval[np.newaxis,:] * np.exp(u0 * z / (2 * D_E[:,np.newaxis])) * np.sinh(S_n * (H - z) / 2)) \
-                                / (np.sinh(S_n * H / 2) * (u0 + D_E[:,np.newaxis] * S_n * coth_SnH)), axis = 1)
+    f_z = np.sum((g_SNR[np.newaxis,:] * J0_rval[np.newaxis,:] * np.exp(u0 * z / (2.0 * D_E[:,np.newaxis])) * np.sinh(S_n * (H - z) / 2.0)) \
+                                / (np.sinh(S_n * H / 2.0) * (u0 + D_E[:,np.newaxis] * S_n * coth_SnH)), axis = 1)
     
     f_z *= Q_E
 
@@ -86,13 +86,13 @@ j_E_vals = compute_j_E(E_vals, num_zeros)
 
 # Plot the graph
 plt.figure(figsize=(8, 6))
-#plt.plot(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
-plt.loglog(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
+plt.plot(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
+# plt.loglog(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
 
 plt.xlabel('E (GeV)')
 plt.ylabel('j(E)')
 plt.title('Particle Spectrum j(E)')
 plt.legend()
-plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+plt.grid(True, which="both", linestyle="--", linewidth = 0.5)
 plt.savefig('fg_j(E).png')
 plt.close()
