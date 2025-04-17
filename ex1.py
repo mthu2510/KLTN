@@ -24,10 +24,13 @@ def func_gSNR(r): # r (kpc)
     )
     return gSNR # kpc^-2
 
+def func_gSNR_2(r, Rs=15.0, eps=0.3):  # Rs: cutoff radius, eps: smoothing width
+    return (1.0 / (np.pi * Rs**2)) * 0.5 * (1.0 - np.tanh((r - Rs) / eps))
+
 # Verify the accuracy of the function g_SNR
 def func_coeff_gSNR(R, zeros_j0):
     r = np.linspace(0, R, 10000)
-    gr = func_gSNR(r) * r**0
+    gr = func_gSNR_2(r, Rs=15.0, eps=0.3) * r**0
     dr = np.append(np.diff(r),0)
 
     j0_n = sp.special.j0(zeros_j0[:,np.newaxis] * r[np.newaxis,:] / R)

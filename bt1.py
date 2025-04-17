@@ -16,7 +16,7 @@ def func_D(E):
     return D 
 
 
-#Đồ thị từ data:
+#  Đồ thị từ data:
 filename = 'plot_data_flux_p_AMS.dat'
 Ea, jE_AMS, err_Ea, err_jE_AMS = np.loadtxt(filename, unpack=True, usecols=[0,1,2,3])
 
