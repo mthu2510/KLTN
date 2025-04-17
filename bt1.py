@@ -72,6 +72,5 @@ ax.legend(loc='lower left', prop={"size":22})
 ax.grid(linestyle='--')
 
 
-plt.show()
-
 plt.savefig('fg_jE_p.png')
+plt.close()

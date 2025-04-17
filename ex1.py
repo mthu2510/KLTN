@@ -9,7 +9,7 @@ u0 = 7 * 1e5  # km/s to cm/s (1 km = 1e5 cm)
 D0 = 1e28  # cm^2/s
 r_val = 8  # kpc
 z = 0  # Define z variable instead of substituting directly
-E_vals = np.logspace(9.0, 11.0, 100)
+E_vals = np.logspace(9.0, 11.0, 100) # 1-100 GeV (10^9-10^11 eV)
 num_zeros = 1000  # Number of first zeros of J0 to use
 
 # Find the first zeros of J0(x)
@@ -25,7 +25,7 @@ def func_gSNR(r): # r (kpc)
     return gSNR # kpc^-2
 
 # Verify the accuracy of the function g_SNR
-def func_coeff_gSNR():
+def func_coeff_gSNR(R, zeros_j0):
     r = np.linspace(0, R, 10000)
     gr = func_gSNR(r) * r**0
     dr = np.append(np.diff(r),0)
@@ -50,21 +50,25 @@ def func_coeff_gSNR():
     plt.savefig('fg_gSNR.png')
     plt.close()
 
-    print(gr[0:10])
-    print(gr_test[0:10])
+    """print(gr[0:10])
+    print(gr_test[0:10])"""
 
     return coeff_gSNR
 
-def Q_E_func(E):
-    return (E / 1.0) ** -2.4
+def Q_E_func(Q0, E):
+    return Q0 * (E / 1.0e9) ** -2.4 # eV
 
-Q_E = Q_E_func(E_vals)
+Q_E = Q_E_func(1.0e2, E_vals)
+
+def D_E_func(D0, E):
+    return D0 * (E / 1.0e9) ** (1/3)  # cm^2/s
+
+D_E = D_E_func(D0, E_vals)
 
 def compute_j_E(E_vals, num_zeros):
     # Compute j(E) based on the zeros of the Bessel function of order 0
-    D_E = D0 * (E_vals / 1.0) ** (1/3)  # D(E) according to the problem
-
-    g_SNR = func_coeff_gSNR()
+    
+    g_SNR = func_coeff_gSNR(R, zeros_j0)
 
     S_n = np.sqrt(u0**2 / (D_E[:,np.newaxis]**2) + 4 * zeros_j0[np.newaxis,:]**2 / R**2)
     coth_SnH = 1.0 / np.tanh(S_n * H / 2.0)
@@ -76,23 +80,39 @@ def compute_j_E(E_vals, num_zeros):
     
     f_z *= Q_E
 
-    v = np.sqrt(2 * E_vals * 1.6e-6 / 9.11e-28)  # Compute particle velocity (cm/s) from energy (1 GeV = 1.6e-6 erg)
-    j_E = v * f_z / (4 * np.pi)
+    # v = np.sqrt(2 * E_vals * 1.6e-6 / 9.11e-28)  # Compute particle velocity (cm/s) from energy (1 GeV = 1.6e-6 erg)
+    vA = u0 
+    j_E = vA * f_z / (4 * np.pi)
 
     return j_E 
 
+def plot_jE (E_vals, j_E_vals): 
+    # Plot the graph
+    plt.figure(figsize=(8, 6))
+    plt.loglog(E_vals, j_E_vals, label=r'$j(E)$ vs $E$ from the model')
+
+    # Plot from the data:
+    filename = 'plot_data_flux_p_AMS.dat'
+    Ea, jE_AMS = np.loadtxt(filename, unpack=True, usecols=[0,1])
+
+    plt.plot(Ea, jE_AMS, label=r'$j(E)$ vs $E$ from the data')
+
+    plt.xlabel('E (GeV)')
+    plt.ylabel('j(E)')
+    plt.title('Particle Spectrum j(E)')
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", linewidth = 0.5)
+    plt.savefig('fg_j(E).png')
+    plt.close()
+
+
+def index_j(E_vals, j_E_vals):
+    return - np.log10(j_E_vals[0] / j_E_vals[-1]) / np.log10(E_vals[0] / E_vals[-1])
+
 # Compute j(E)
 j_E_vals = compute_j_E(E_vals, num_zeros)
+plot_jE (E_vals, j_E_vals)
 
-# Plot the graph
-plt.figure(figsize=(8, 6))
-plt.plot(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
-# plt.loglog(E_vals, j_E_vals, label=r'$j(E)$ vs $E$')
-
-plt.xlabel('E (GeV)')
-plt.ylabel('j(E)')
-plt.title('Particle Spectrum j(E)')
-plt.legend()
-plt.grid(True, which="both", linestyle="--", linewidth = 0.5)
-plt.savefig('fg_j(E).png')
-plt.close()
+# Compute the index of the slope 
+alpha = index_j(E_vals, j_E_vals)
+print(f"Spectral index α ≈ {alpha:.3f}")
