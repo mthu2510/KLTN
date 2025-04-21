@@ -24,13 +24,13 @@ def func_gSNR(r): # r (kpc)
     )
     return gSNR # kpc^-2
 
-def func_gSNR_2(r, Rs=15.0, eps=0.3):  # Rs: cutoff radius, eps: smoothing width
+def func_gSNR_s(r, Rs = 15.0, eps = 0.3):  # Rs: cutoff radius, eps: smoothing width
     return (1.0 / (np.pi * Rs**2)) * 0.5 * (1.0 - np.tanh((r - Rs) / eps))
 
 # Verify the accuracy of the function g_SNR
 def func_coeff_gSNR(R, zeros_j0):
     r = np.linspace(0, R, 10000)
-    gr = func_gSNR_2(r, Rs=15.0, eps=0.3) * r**0
+    gr = func_gSNR_s(r) * r**0
     dr = np.append(np.diff(r),0)
 
     j0_n = sp.special.j0(zeros_j0[:,np.newaxis] * r[np.newaxis,:] / R)
@@ -53,22 +53,19 @@ def func_coeff_gSNR(R, zeros_j0):
     plt.savefig('fg_gSNR.png')
     plt.close()
 
-    """print(gr[0:10])
-    print(gr_test[0:10])"""
-
     return coeff_gSNR
 
 def Q_E_func(Q0, E):
-    return Q0 * (E / 1.0e9) ** -2.4 # eV
+    return Q0 * (E / 1.0e9) ** (-2.4) # eV
 
-Q_E = Q_E_func(1.0e2, E_vals)
+Q_E = Q_E_func(1.0e16, E_vals)
 
 def D_E_func(D0, E):
     return D0 * (E / 1.0e9) ** (1/3)  # cm^2/s
 
 D_E = D_E_func(D0, E_vals)
 
-def compute_j_E(E_vals, num_zeros):
+def compute_j_E(R, zeros_j0, u0, D_E, H, r_val, z, Q_E):
     # Compute j(E) based on the zeros of the Bessel function of order 0
     
     g_SNR = func_coeff_gSNR(R, zeros_j0)
