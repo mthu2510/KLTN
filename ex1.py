@@ -146,7 +146,7 @@ def plot_2D_fixed_E (R, H, E_fixed):
 R_grid, Z_grid, j_E_vals = plot_2D_fixed_E(R, H, E_fixed)
 
 plt.figure(figsize=(8, 6))
-plt.contourf(Z_grid, R_grid, np.log10(j_E_vals), levels=50, cmap='plasma')  # ✅ fix
+plt.contourf(Z_grid, R_grid, np.log10(j_E_vals), levels=50, cmap='plasma')
 plt.colorbar(label=r'$\log_{10}(j(E))$')
 plt.xlabel('z (kpc)')
 plt.ylabel('r (kpc)')
