@@ -10,6 +10,7 @@ D0 = 1e28  # cm^2/s
 r_val = 8  # kpc
 z = 0  # Define z variable instead of substituting directly
 E_vals = np.logspace(9.0, 11.0, 100) # 1-100 GeV (10^9-10^11 eV)
+E_fixed = 1e10 # 10 GeV
 num_zeros = 1000  # Number of first zeros of J0 to use
 
 # Find the first zeros of J0(x)
@@ -58,17 +59,16 @@ def func_coeff_gSNR(R, zeros_j0):
 def Q_E_func(Q0, E):
     return Q0 * (E / 1.0e9) ** (-2.4) # eV
 
-Q_E = Q_E_func(1.0e16, E_vals)
-
 def D_E_func(D0, E):
     return D0 * (E / 1.0e9) ** (1/3)  # cm^2/s
 
-D_E = D_E_func(D0, E_vals)
+def compute_j_E(R, zeros_j0, u0, H, r_val, z):
+    Q_E = Q_E_func(1.0e16, E_vals) 
+    D_E = D_E_func(D0, E_vals)
 
-def compute_j_E(R, zeros_j0, u0, D_E, H, r_val, z, Q_E):
     # Compute j(E) based on the zeros of the Bessel function of order 0
     
-    g_SNR = func_coeff_gSNR(R, zeros_j0)
+    g_SNR = func_coeff_gSNR(R, zeros_j0) # shape (N,)
 
     S_n = np.sqrt(u0**2 / (D_E[:,np.newaxis]**2) + 4 * zeros_j0[np.newaxis,:]**2 / R**2)
     coth_SnH = 1.0 / np.tanh(S_n * H / 2.0)
@@ -110,9 +110,47 @@ def index_j(E_vals, j_E_vals):
     return - np.log10(j_E_vals[0] / j_E_vals[-1]) / np.log10(E_vals[0] / E_vals[-1])
 
 # Compute j(E)
-j_E_vals = compute_j_E(E_vals, num_zeros)
+j_E_vals = compute_j_E(R, zeros_j0, u0, H, r_val, z)
 plot_jE (E_vals, j_E_vals)
 
 # Compute the index of the slope 
 alpha = index_j(E_vals, j_E_vals)
 print(f"Spectral index α ≈ {alpha:.3f}")
+
+def plot_2D_fixed_E (R, H, E_fixed):
+    r = np.linspace(0, R, 200) # (200,)
+    z = np.linspace(0, H, 200) # (200,)
+
+    # Create meshgrid of r and z
+    R_grid, Z_grid = np.meshgrid(r, z, indexing='ij')  # (200, 200)
+
+    Q_E = Q_E_func(1.0e16, E_fixed)
+    D_E = D_E_func(D0, E_fixed)
+
+    g_SNR = func_coeff_gSNR(R, zeros_j0) # shape (N,)
+
+    S_n = np.sqrt(u0**2 / (D_E**2) + 4 * zeros_j0**2 / R**2) # shape (N,)
+    coth_SnH = 1.0 / np.tanh(S_n * H / 2.0) # shape (N,)
+
+    J0 = sp.special.j0(zeros_j0[np.newaxis, np.newaxis, :] * R_grid[:, :, np.newaxis] / R) 
+    
+    f_z = np.sum((g_SNR[np.newaxis, np.newaxis, :] * J0 * np.exp(u0 * Z_grid[:, :, np.newaxis] / (2.0 * D_E)) * np.sinh(S_n[np.newaxis, np.newaxis, :] * (H - Z_grid[:, :, np.newaxis]) / 2.0)) \
+                                / (np.sinh(S_n[np.newaxis, np.newaxis, :] * H / 2.0) * (u0 + D_E * S_n[np.newaxis, np.newaxis, :] * coth_SnH[np.newaxis, np.newaxis, :])), axis = 2)
+    
+    f_z *= Q_E
+    vA = u0 
+    j_E = vA * f_z / (4 * np.pi)
+
+    return R_grid, Z_grid, j_E
+    
+R_grid, Z_grid, j_E_vals = plot_2D_fixed_E(R, H, E_fixed)
+
+plt.figure(figsize=(8, 6))
+plt.contourf(Z_grid, R_grid, np.log10(j_E_vals), levels=50, cmap='plasma')  # ✅ fix
+plt.colorbar(label=r'$\log_{10}(j(E))$')
+plt.xlabel('z (kpc)')
+plt.ylabel('r (kpc)')
+plt.title(f'2D map of j(E) at E = {E_fixed/1e9:.1f} GeV')
+plt.grid(True, linestyle="--", linewidth=0.5)
+plt.savefig('fg_jE_fixed_E.png')
+plt.close()
