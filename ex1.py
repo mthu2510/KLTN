@@ -81,7 +81,7 @@ def compute_j_E(R, zeros_j0, u0, H, r_val, z):
     f_z *= Q_E
 
     # v = np.sqrt(2 * E_vals * 1.6e-6 / 9.11e-28)  # Compute particle velocity (cm/s) from energy (1 GeV = 1.6e-6 erg)
-    vA = u0 
+    vA = u0
     j_E = vA * f_z / (4 * np.pi)
 
     return j_E 
@@ -89,22 +89,41 @@ def compute_j_E(R, zeros_j0, u0, H, r_val, z):
 def plot_jE (E_vals, j_E_vals): 
     # Plot the graph
     plt.figure(figsize=(8, 6))
-    plt.loglog(E_vals, j_E_vals, label=r'$j(E)$ vs $E$ from the model')
+    plt.loglog(E_vals, j_E_vals, label = f'$j(E)$ with vA = 7 km/s')
 
     # Plot from the data:
     filename = 'plot_data_flux_p_AMS.dat'
     Ea, jE_AMS = np.loadtxt(filename, unpack=True, usecols=[0,1])
 
-    plt.plot(Ea, jE_AMS, label=r'$j(E)$ vs $E$ from the data')
+    plt.plot(Ea, jE_AMS, label = f'$j(E)$ from the data')
 
-    plt.xlabel('E (GeV)')
-    plt.ylabel('j(E)')
+    plt.xlabel('E [eV]')
+    plt.ylabel('j(E) [eV^{-1} cm^{-2} s^{-1}]')
     plt.title('Particle Spectrum j(E)')
     plt.legend()
     plt.grid(True, which="both", linestyle="--", linewidth = 0.5)
     plt.savefig('fg_j(E).png')
     plt.close()
 
+def plot_jE_multiple_vA(E_vals, vA_list):
+    plt.figure(figsize=(8, 6))
+
+    for vA in vA_list:
+        j_E_vals = compute_j_E(R, zeros_j0, vA, H, r_val, z)
+        plt.loglog(E_vals, j_E_vals, label = f'$v_A$ = {vA/1e5:.1f} km/s')
+
+    # Plot dữ liệu thực tế từ AMS
+    filename = 'plot_data_flux_p_AMS.dat'
+    Ea, jE_AMS = np.loadtxt(filename, unpack=True, usecols=[0,1])
+    plt.plot(Ea, jE_AMS, label = 'AMS-02 Data')
+
+    plt.xlabel('E [eV]')
+    plt.ylabel('j(E) [eV$^{-1}$ cm$^{-2}$ s$^{-1}$]')
+    plt.title('j(E) for different $v_A$')
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+    plt.savefig('fg_jE_multiple_vA.png')
+    plt.close()
 
 def index_j(E_vals, j_E_vals):
     return - np.log10(j_E_vals[0] / j_E_vals[-1]) / np.log10(E_vals[0] / E_vals[-1])
@@ -112,6 +131,11 @@ def index_j(E_vals, j_E_vals):
 # Compute j(E)
 j_E_vals = compute_j_E(R, zeros_j0, u0, H, r_val, z)
 plot_jE (E_vals, j_E_vals)
+
+# Compute j(E) for different vA
+vA_list = [3e5, 5e5, 7e5, 1e6]  # Đơn vị: cm/s (tương ứng 3, 5, 7, 10 km/s)
+plot_jE_multiple_vA(E_vals, vA_list)
+
 
 # Compute the index of the slope 
 alpha = index_j(E_vals, j_E_vals)
@@ -141,16 +165,34 @@ def plot_2D_fixed_E (R, H, E_fixed):
     vA = u0 
     j_E = vA * f_z / (4 * np.pi)
 
-    return R_grid, Z_grid, j_E
+    return r, z, R_grid, Z_grid, j_E
     
-R_grid, Z_grid, j_E_vals = plot_2D_fixed_E(R, H, E_fixed)
+r, z, R_grid, Z_grid, j_E_vals = plot_2D_fixed_E(R, H, E_fixed)
 
-plt.figure(figsize=(8, 6))
-plt.contourf(Z_grid, R_grid, np.log10(j_E_vals), levels=50, cmap='plasma')
-plt.colorbar(label=r'$\log_{10}(j(E))$')
-plt.xlabel('z (kpc)')
-plt.ylabel('r (kpc)')
-plt.title(f'2D map of j(E) at E = {E_fixed/1e9:.1f} GeV')
-plt.grid(True, linestyle="--", linewidth=0.5)
+fig, axs = plt.subplots(2, 2, figsize=(12, 8), gridspec_kw={'height_ratios': [1, 1], 'width_ratios': [2, 1]})
+
+contour = axs[0, 0].contourf(R_grid, Z_grid, j_E_vals, levels=50, cmap = 'viridis')
+plt.colorbar(contour, ax=axs[0, 0])
+axs[0, 0].set_xlabel('r [kpc]')
+axs[0, 0].set_ylabel('z [kpc]')
+axs[0, 0].set_title('2D map of j(E) at E = 10 GeV')
+axs[0, 0].grid(True)
+
+axs[1, 0].plot(r, j_E_vals[:,0], color='red')
+axs[1, 0].set_xlabel('r [kpc]')
+axs[1, 0].set_ylabel('j(E) [eV^{-1} cm^{-2} s^{-1}]')
+axs[1, 0].set_title('2D map of j(E) at E = 10 GeV and z = 0')
+axs[1, 0].grid(True)
+
+axs[1, 1].plot(z, j_E_vals[0,:], color='red')
+axs[1, 1].set_xlabel('z [kpc]')
+axs[1, 1].set_ylabel('j(E) [eV^{-1} cm^{-2} s^{-1}]')
+axs[1, 1].set_title('2D map of j(E) at E = 10 GeV and r = 0')
+axs[1, 1].grid(True)
+
+# Loại bỏ vị trí không cần thiết (hàng 1, cột 2)
+fig.delaxes(axs[0, 1])
+
+plt.tight_layout()
 plt.savefig('fg_jE_fixed_E.png')
 plt.close()
