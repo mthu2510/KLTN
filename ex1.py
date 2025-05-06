@@ -12,7 +12,7 @@ r_val = 8  # kpc
 z = 0  # Define z variable instead of substituting directly
 E_vals = np.logspace(9.0, 11.0, 100) # 1-100 GeV (10^9-10^11 eV)
 E_fixed = 1e10 # 10 GeV
-num_zeros = 500  # Number of first zeros of J0 to use
+num_zeros = 100  # Number of first zeros of J0 to use
 
 # Find the first zeros of J0(x)
 zeros_j0 = sp.special.jn_zeros(0, num_zeros) # zeta_n
@@ -40,7 +40,7 @@ def func_gSNR_YUK04(r):
     )    
     return gSNR # pc^-2
 
-def func_gSNR_YUK04_smooth(r, Rs = 15.0, eps = 0.1):  # Rs: cutoff radius, eps: smoothing width
+def func_gSNR_YUK04_smooth(r, Rs = 15.0, eps = 0.2):  # Rs: cutoff radius, eps: smoothing width
     g = np.power((r + 0.55) / 9.05, 1.64) * np.exp(-4.01 * (r - 8.5) / 9.05) / 5.95828e+8
     g_smooth = g * 0.5 * (1.0 - np.tanh((r - Rs) / eps))
     return g_smooth * 1e6 # kpc^-2
@@ -64,7 +64,7 @@ def func_coeff_gSNR(R, zeros_j0):
     plt.plot(r, gr_test, label='gr_test', linestyle='dashed')
     # plt.ylim()
     plt.xlabel('r (kpc)')
-    plt.ylabel('g_SNR')
+    plt.ylabel('g_SNR (kpc$^{-2}$)')
     plt.title('Test g_SNR')
     plt.legend()
     plt.grid(True, linestyle="--", linewidth=0.5)
@@ -110,8 +110,8 @@ def compute_j_E(Q0, D0, R, zeros_j0, u0, H, r_val, z):
 
 def plot_jE (E_vals, j_E_vals): 
     # Plot the graph
-    plt.figure(figsize=(8, 6))
-    plt.loglog(E_vals, j_E_vals, label = f'$j(E)$ with vA = 7 km/s')
+    plt.figure(figsize = (8, 6))
+    plt.loglog(E_vals, j_E_vals, label = f'$j(E)$ with u0 = 7 km/s')
 
     # Plot from the data:
     filename = 'plot_data_flux_p_AMS.dat'
@@ -119,11 +119,11 @@ def plot_jE (E_vals, j_E_vals):
 
     plt.plot(Ea, jE_AMS, 'ko', label = f'$j(E)$ from the data')
 
-    plt.xlabel('E [eV]')
-    plt.ylabel('j(E) [eV^{-1} cm^{-2} s^{-1}]')
+    plt.xlabel('E (eV)')
+    plt.ylabel('j(E) (eV$^{-1}$ cm$^{-2}$ s$^{-1}$)')
     plt.title('Particle Spectrum j(E)')
     plt.legend()
-    plt.grid(True, which="both", linestyle="--", linewidth = 0.5)
+    plt.grid(True, which = "both", linestyle="--", linewidth = 0.5)
     plt.savefig('fg_j(E).png')
     plt.close()
     return Ea, jE_AMS
@@ -142,20 +142,20 @@ print(f"Spectral index α ≈ {alpha:.3f}")
 alpha_data = index_j(Ea, jE_AMS)
 print(f"AMS-02 Spectral index α_data ≈ {alpha_data:.3f}")
 
-def plot_jE_multiple_vA(E_vals, vA_list):
+def plot_jE_multiple_u0(E_vals, u0_list):
     plt.figure(figsize=(8, 6))
 
-    for vA in vA_list:
-        j_E_vals = compute_j_E(R, zeros_j0, vA, H, r_val, z)
-        plt.loglog(E_vals, j_E_vals, label = f'$v_A$ = {vA/1e5:.1f} km/s')
+    for u0 in u0_list:
+        j_E_vals = compute_j_E(Q0, D0, R, zeros_j0, u0, H, r_val, z)
+        plt.loglog(E_vals, j_E_vals, label = f'$u0$ = {u0/1e5:.1f} km/s')
 
     # Plot dữ liệu thực tế từ AMS
     filename = 'plot_data_flux_p_AMS.dat'
     Ea, jE_AMS = np.loadtxt(filename, unpack=True, usecols=[0,1])
-    plt.plot(Ea, jE_AMS, label = 'AMS-02 Data')
+    plt.plot(Ea, jE_AMS, 'ko', label = 'AMS-02 Data')
 
-    plt.xlabel('E [eV]')
-    plt.ylabel('j(E) [eV$^{-1}$ cm$^{-2}$ s$^{-1}$]')
+    plt.xlabel('E (eV)')
+    plt.ylabel('j(E) (eV$^{-1}$ cm$^{-2}$ s$^{-1}$)')
     plt.title('j(E) for different $v_A$')
     plt.legend()
     plt.grid(True, which="both", linestyle="--", linewidth=0.5)
@@ -193,20 +193,20 @@ def plot_2D_fixed_E(r, z, R_grid, Z_grid, j_E_vals):
 
     contour = axs[0, 0].contourf(R_grid, Z_grid, j_E_vals, levels=50, cmap = 'viridis')
     plt.colorbar(contour, ax=axs[0, 0])
-    axs[0, 0].set_xlabel('r [kpc]')
-    axs[0, 0].set_ylabel('z [kpc]')
+    axs[0, 0].set_xlabel('r (kpc)')
+    axs[0, 0].set_ylabel('z (kpc)')
     axs[0, 0].set_title('2D map of j(E) at E = 10 GeV')
     axs[0, 0].grid(True)
 
     axs[1, 0].plot(r, j_E_vals[:,0], color='red')
-    axs[1, 0].set_xlabel('r [kpc]')
-    axs[1, 0].set_ylabel('j(E) [eV$^{-1}$ cm^{-2} s^{-1}]')
+    axs[1, 0].set_xlabel('r (kpc)')
+    axs[1, 0].set_ylabel('j(E) ([)eV$^{-1}$ cm$^{-2}$ s$^{-1}$)')
     axs[1, 0].set_title('2D map of j(E) at E = 10 GeV and z = 0')
     axs[1, 0].grid(True)
 
     axs[1, 1].plot(z, j_E_vals[0,:], color='red')
-    axs[1, 1].set_xlabel('z [kpc]')
-    axs[1, 1].set_ylabel('j(E) [eV^{-1} cm^{-2} s^{-1}]')
+    axs[1, 1].set_xlabel('z (kpc)')
+    axs[1, 1].set_ylabel('j(E) (eV$^{-1}$ cm$^{-2}$ s$^{-1}$)')
     axs[1, 1].set_title('2D map of j(E) at E = 10 GeV and r = 0')
     axs[1, 1].grid(True)
 

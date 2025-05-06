@@ -2,8 +2,8 @@ import numpy as np
 import jax.numpy as jnp
 import jax.random as jr 
 import matplotlib.pyplot as plt
+import scipy as sp
 from jax import jit
-import scipy as sp 
 
 # Define constants
 pars = jnp.array([20, 4, 700.0e5, 1.0e12, 1.0e28, 8.0, 0]) 
@@ -49,10 +49,10 @@ def func_coeff_gSNR(pars, zeros_j0):
     gr = func_gSNR_YUK04_smooth(r) * r**0
     dr = jnp.append(jnp.diff(r),0)
 
-    j0_n = jnp.special.jv(0, zeros_j0[:,jnp.newaxis] * r[jnp.newaxis,:] / pars[1])
+    j0_n = sp.special.j0(zeros_j0[:,jnp.newaxis] * r[jnp.newaxis,:] / pars[1])
 
     coeff_gSNR = jnp.sum(r[jnp.newaxis,:] * gr[jnp.newaxis,:] * j0_n * dr[jnp.newaxis,:], axis=1)
-    coeff_gSNR *= (2.0 / (pars[1] * jnp.special.jv(1, zeros_j0))**2)
+    coeff_gSNR *= (2.0 / (pars[1] * sp.special.j1(zeros_j0))**2)
 
     gr_test = jnp.sum(j0_n * coeff_gSNR[:,jnp.newaxis], axis=0) 
 
@@ -83,7 +83,6 @@ def relativistic_velocity(E):  # E in eV
     c = 3e10      # cm/s
     return c * jnp.sqrt(1 - (m * c**2 / (erg + m * c**2))**2)
 
-@jit
 def compute_j_E(pars, zeros_j0, E_vals, g_SNR):
     Q_E = Q_E_func(pars, E_vals) 
     D_E = D_E_func(pars, E_vals)
@@ -91,7 +90,7 @@ def compute_j_E(pars, zeros_j0, E_vals, g_SNR):
     S_n = jnp.sqrt(pars[2]**2 / (D_E[:,jnp.newaxis]**2) + 4 * zeros_j0[jnp.newaxis,:]**2 / pars[1]**2)
     coth_SnH = 1.0 / jnp.tanh(S_n * pars[0] / 2.0)
 
-    J0_rval = jnp.special.jv(0, zeros_j0 * pars[5] / pars[1])  # Compute J0 at r_val
+    J0_rval = sp.special.j0(zeros_j0 * pars[5] / pars[1])  # Compute J0 at r_val
     
     f_z = jnp.sum((g_SNR[jnp.newaxis,:] * J0_rval[jnp.newaxis,:] * jnp.exp(pars[2] * pars[6] / (2.0 * D_E[:,jnp.newaxis])) * jnp.sinh(S_n * (pars[0] - pars[6]) / 2.0)) \
                                 / (jnp.sinh(S_n * pars[0] / 2.0) * (pars[2] + D_E[:,jnp.newaxis] * S_n * coth_SnH)), axis = 1)
@@ -151,7 +150,7 @@ def compute_jE_fixed_E (pars, E_fixed, g_SNR):
     S_n = jnp.sqrt(pars[2]**2 / (D_E**2) + 4 * zeros_j0**2 / pars[1]**2) # shape (N,)
     coth_SnH = 1.0 / jnp.tanh(S_n * pars[2] / 2.0) # shape (N,)
 
-    J0 = jnp.special.jv(0, zeros_j0[jnp.newaxis, jnp.newaxis, :] * R_grid[:, :, jnp.newaxis] / pars[1]) 
+    J0 = sp.special.j0(zeros_j0[jnp.newaxis, jnp.newaxis, :] * R_grid[:, :, jnp.newaxis] / pars[1]) 
     
     f_z = jnp.sum((g_SNR[jnp.newaxis, jnp.newaxis, :] * J0 * jnp.exp(pars[2] * Z_grid[:, :, jnp.newaxis] / (2.0 * D_E)) * jnp.sinh(S_n[jnp.newaxis, jnp.newaxis, :] * (pars[0] - Z_grid[:, :, jnp.newaxis]) / 2.0)) \
                                 / (jnp.sinh(S_n[jnp.newaxis, jnp.newaxis, :] * pars[0] / 2.0) * (pars[2] + D_E * S_n[jnp.newaxis, jnp.newaxis, :] * coth_SnH[jnp.newaxis, jnp.newaxis, :])), axis = 2)
