@@ -1,7 +1,7 @@
 import numpy as np
 """from jax import config
-config.update("jax_enable_x64", True)"""
-#config.update("jax_debug_nans", True)
+config.update("jax_enable_x64", True)
+config.update("jax_debug_nans", True)"""
 import os
 os.environ['JAX_ENABLE_X64'] = 'True'
 import jax.numpy as jnp
@@ -134,6 +134,7 @@ def relativistic_velocity(E):  # E in eV
     c = 3e10      # cm/s
     return c * jnp.sqrt(1 - (m * c**2 / (erg + m * c**2))**2)
 
+@jit
 def compute_j_E(pars, zeros_j0, E_vals, g_SNR):
     Q_E = Q_E_func(pars, E_vals) 
     D_E = D_E_func(pars, E_vals)
