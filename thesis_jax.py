@@ -10,8 +10,14 @@ import scipy as sp
 from jax import jit
 
 # Define constants
-pars = jnp.array([20.0, 4.0, 7.0e5, 1.0e12, 1.0e28, 8.0]) 
-# H, R (kpc), u0 (km/s to cm/s), Q0, D0, r_vals
+pars = jnp.array([
+    20.0,                 # H (kpc)
+    4.0,                  # R (kpc)
+    7.0 * 1e5 / 3.086e21, # u0 (cm/s -> kpc/s)
+    1.0e12,               # Q0 (eV^{-1} s^{-1} kpc^{-2})
+    1.0e28,               # D0 (cm^2/s)
+    8.0                   # r_vals (kpc)
+])
 z = 0
 E_vals = jnp.logspace(9.0, 11.0, 100) # 1-100 GeV (10^9-10^11 eV)
 E_fixed = 1.0e10 # 10 GeV
@@ -88,12 +94,12 @@ def func_gSNR_YUK04(r):
         jnp.power((r + 0.55) / 9.05, 1.64) * jnp.exp(-4.01 * (r - 8.5) / 9.05) / 5.95828e+8,
         0.0
     )    
-    return gSNR # pc^-2
+    return gSNR # kpc^-2
 
 def func_gSNR_YUK04_smooth(r, Rs = 15.0, eps = 0.1):  # Rs: cutoff radius, eps: smoothing width
     g = jnp.power((r + 0.55) / 9.05, 1.64) * jnp.exp(-4.01 * (r - 8.5) / 9.05) / 5.95828e+8
     g_smooth = g * 0.5 * (1.0 - jnp.tanh((r - Rs) / eps))
-    return g_smooth * 1e6 # kpc^-2
+    return g_smooth # kpc^-2
 
 # Verify the accuracy of the function g_SNR
 def func_coeff_gSNR(pars, zeros_j0):
@@ -123,36 +129,38 @@ def func_coeff_gSNR(pars, zeros_j0):
     return coeff_gSNR
 
 def Q_E_func(pars, E):
-    return pars[3] * (E / 1.0e9) ** (-2.4) # eV
+    return pars[3] * (E / 1.0e9) ** (-2.4) # eV^−1 s^−1 kpc^−2
 
 def D_E_func(pars, E):
-    return pars[4] * (E / 1.0e9) ** (1/3)  # cm^2/s
+    D_E = pars[4] * (E / 1.0e9) ** (1/3)  # cm^2/s
+    return D_E / (3.086e21)**2 # kpc^2/s
 
 def relativistic_velocity(E):  # E in eV
-    erg = E * 1.6e-12
-    m = 1.67e-24  # g, proton mass
-    c = 3e10      # cm/s
-    return c * jnp.sqrt(1 - (m * c**2 / (erg + m * c**2))**2)
+    m_eV = 9.38272e8  # proton rest mass energy in eV
+    c = 3e10          # cm/s
+    return c * jnp.sqrt(1 - 1 / ((E + m_eV) / m_eV) **2) # cm/s
 
 @jit
 def compute_j_E(pars, zeros_j0, E_vals, g_SNR):
     Q_E = Q_E_func(pars, E_vals) 
     D_E = D_E_func(pars, E_vals)
     
-    # pars[2] = cm/s
+    # pars[2] = u0 = cm/s
     # D_E = cm^2/s 
     # (pars[2]/D_E)^2 = ((cm/s)/(cm^2/s))^2 = (1/cm)^2
     # zeros_j0 = 1
-    # pars[1] = kpc
-    S_n = jnp.sqrt(((pars[2]*3.086e21 / D_E[:,jnp.newaxis])**2) + 4 * zeros_j0[jnp.newaxis,:]**2 / pars[1]**2)
-    coth_SnH = 1.0 / jnp.tanh(S_n * pars[0] / 2.0)
+    # pars[1] = R = kpc
+    # pars[0] = H = kpc
+
+    S_n = jnp.sqrt(((pars[2] / D_E[:,jnp.newaxis]) **2) + 4 * (zeros_j0[jnp.newaxis,:] / pars[1]) **2) # 1/kpc
+    coth_SnH = 1.0 / jnp.tanh(S_n * pars[0] / 2.0) # 1/kpc * kpc = 1
 
     J0_rval = j0(zeros_j0 * pars[5] / pars[1])  # Compute J0 at r_val
     
     f_z = jnp.sum((g_SNR[jnp.newaxis,:] * J0_rval[jnp.newaxis,:] * jnp.exp(pars[2] * z / (2.0 * D_E[:,jnp.newaxis])) * jnp.exp(-S_n * z / 2) - jnp.exp(-S_n * pars[0] + S_n * z / 2)) \
                                 / ((1 - jnp.exp(-S_n * pars[0])) * (pars[2] + D_E[:,jnp.newaxis] * S_n * coth_SnH)), axis = 1)
     
-    f_z *= Q_E
+    f_z *= Q_E 
 
     vp = relativistic_velocity(E_vals)
     j_E = vp * f_z / (4 * jnp.pi)
@@ -163,7 +171,7 @@ def compute_j_E(pars, zeros_j0, E_vals, g_SNR):
 def plot_jE (E_vals, j_E_vals): 
     # Plot the graph
     plt.figure(figsize=(8, 6))
-    plt.loglog(E_vals, j_E_vals, label = f'$j(E)$ with vA = 7 km/s')
+    plt.loglog(E_vals, j_E_vals, label = f'$j(E)$ with u0 = 7 km/s')
 
     # Plot from the data:
     filename = 'plot_data_flux_p_AMS.dat'
@@ -182,6 +190,7 @@ def plot_jE (E_vals, j_E_vals):
 
 # Compute and plot j(E)
 g_SNR = func_coeff_gSNR(pars, zeros_j0) # shape (N,)
+print(g_SNR)
 j_E_vals = compute_j_E(pars, zeros_j0, E_vals, g_SNR)
 print(j_E_vals)
 Ea, jE_AMS = plot_jE (E_vals, j_E_vals)
