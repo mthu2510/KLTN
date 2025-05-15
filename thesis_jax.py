@@ -11,13 +11,14 @@ from jax import jit
 
 # Define constants
 pars = jnp.array([
-    20.0,                 # H (kpc)
-    4.0,                  # R (kpc)
+    4.0,                  # H (kpc)
+    20.0,                 # R (kpc)
     7.0 * 1e5 / 3.086e21, # u0 (cm/s -> kpc/s)
     1.0e12,               # Q0 (eV^{-1} s^{-1} kpc^{-2})
     1.0e28,               # D0 (cm^2/s)
     8.0                   # r_vals (kpc)
 ])
+mp = 9.38272e8  # proton rest mass energy in eV
 z = 0
 E_vals = jnp.logspace(9.0, 11.0, 100) # 1-100 GeV (10^9-10^11 eV)
 E_fixed = 1.0e10 # 10 GeV
@@ -88,23 +89,23 @@ def func_gSNR_smooth(r, Rs = 15.0, eps = 0.1):  # Rs: cutoff radius, eps: smooth
 # Surface density of SNRs from Yusifov et al. 2004
 def func_gSNR_YUK04(r):
 # r (pc)
-    r = jnp.array(r) * 1.0e-3 # kpc
+    r = jnp.array(r) #* 1.0e-3 # kpc
     gSNR = jnp.where(
         r < 15.0,
         jnp.power((r + 0.55) / 9.05, 1.64) * jnp.exp(-4.01 * (r - 8.5) / 9.05) / 5.95828e+8,
         0.0
     )    
-    return gSNR # kpc^-2
+    return gSNR * 1.0e6 # kpc^-2
 
 def func_gSNR_YUK04_smooth(r, Rs = 15.0, eps = 0.1):  # Rs: cutoff radius, eps: smoothing width
     g = jnp.power((r + 0.55) / 9.05, 1.64) * jnp.exp(-4.01 * (r - 8.5) / 9.05) / 5.95828e+8
     g_smooth = g * 0.5 * (1.0 - jnp.tanh((r - Rs) / eps))
-    return g_smooth # kpc^-2
+    return g_smooth * 1.0e6 # kpc^-2
 
 # Verify the accuracy of the function g_SNR
 def func_coeff_gSNR(pars, zeros_j0):
-    r = jnp.linspace(0, pars[1], 10000)
-    gr = func_gSNR_YUK04_smooth(r) * r**0
+    r = jnp.linspace(0, pars[1], 10000)     # kpc
+    gr = func_gSNR_YUK04_smooth(r) * r**0   # kpc^-2
     dr = jnp.append(jnp.diff(r),0)
 
     j0_n = j0(zeros_j0[:,jnp.newaxis] * r[jnp.newaxis,:] / pars[1])
@@ -126,19 +127,36 @@ def func_coeff_gSNR(pars, zeros_j0):
     plt.grid(True, linestyle="--", linewidth=0.5)
     plt.savefig('fg_gSNR_jax.png')
     plt.close()
-    return coeff_gSNR
+    return coeff_gSNR # kpc^-2
 
-def Q_E_func(pars, E):
-    return pars[3] * (E / 1.0e9) ** (-2.4) # eV^−1 s^−1 kpc^−2
+"""def Q_E_func(pars, E):
+    return pars[3] * (E / 1.0e9) ** (-2.4) # eV^−1 s^−1 kpc^−2"""
+
+def Q_E_func(pars, E): 
+    p=jnp.sqrt((E+mp)**2-mp**2) # eV
+    vp=p/(E+mp)
+    xiSNR = 0.1 
+    alpha = 4.4
+
+    # Injection spectrum of sources
+    xmin=jnp.sqrt((1.0e8+mp)**2-mp**2)/mp
+    xmax=jnp.sqrt((1.0e14+mp)**2-mp**2)/mp
+    x=jnp.logspace(jnp.log10(xmin),jnp.log10(xmax),5000)
+    Gam=jnp.trapezoid(x**(2.0-alpha)*(jnp.sqrt(x**2+1.0)-1.0),x)
+
+    RSNR=0.03 # yr^-1 -> SNR rate
+    ENSR=1.0e51*6.242e+11 # eV -> Average kinetic energy of SNRs
+    QE=(xiSNR*RSNR*ENSR/(mp**2*vp*Gam))*(p/mp)**(2.0-alpha) / (365.0*86400.0) 
+
+    return QE # eV^-1 s^-1
 
 def D_E_func(pars, E):
     D_E = pars[4] * (E / 1.0e9) ** (1/3)  # cm^2/s
     return D_E / (3.086e21)**2 # kpc^2/s
 
 def relativistic_velocity(E):  # E in eV
-    m_eV = 9.38272e8  # proton rest mass energy in eV
     c = 3e10          # cm/s
-    return c * jnp.sqrt(1 - 1 / ((E + m_eV) / m_eV) **2) # cm/s
+    return c * jnp.sqrt(1 - 1 / ((E + mp) / mp) **2) # cm/s
 
 @jit
 def compute_j_E(pars, zeros_j0, E_vals, g_SNR):
@@ -163,15 +181,15 @@ def compute_j_E(pars, zeros_j0, E_vals, g_SNR):
     f_z *= Q_E 
 
     vp = relativistic_velocity(E_vals)
-    j_E = vp * f_z / (4 * jnp.pi)
+    j_E = vp * f_z / (4 * jnp.pi) 
 
-    return j_E
+    return j_E * 1.0e-3 / (3.086e21)**3 # eV^-1 s-1 cm^-2 sr^-1
     #return S_n * (pars[0] - z) / 2.0
 
 def plot_jE (E_vals, j_E_vals): 
     # Plot the graph
     plt.figure(figsize=(8, 6))
-    plt.loglog(E_vals, j_E_vals, label = f'$j(E)$ with u0 = 7 km/s')
+    plt.loglog(E_vals, jnp.abs(j_E_vals), label = f'$j(E)$ with u0 = 7 km/s')
 
     # Plot from the data:
     filename = 'plot_data_flux_p_AMS.dat'
